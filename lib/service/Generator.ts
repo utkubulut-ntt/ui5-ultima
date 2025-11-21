@@ -23,7 +23,7 @@ export default class Generator {
 
     private async generateApp() {
         const target = path.join(process.cwd(), this.uiModule);
-        const source = path.join(__dirname, "..", "..", "src", "template");
+        const source = path.join(__dirname, "..", "..", "template", "app");
         await this.createRootDirectory(target);
         await this.createFiles(source, target);
         await this.installNpmPackages(target);
