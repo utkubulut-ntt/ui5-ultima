@@ -1,7 +1,7 @@
 {
   "name": "ui5-ultima",
   "version": "1.0.0",
-  "description": "SAPUI5 TypeScript Generator",
+  "description": "UI5 Ultima is a CLI tool to generate free-style SAPUI5 applications with TypeScript. The UI5 Ultima comes with some useful built-in SAPUI5 classes.",
   "keywords": [
     "sapui5",
     "generator",
@@ -11,7 +11,8 @@
   "license": "UNLICENSED",
   "bin": "dist/cli.js",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "scripts": {
     "prepack": "tsc"
@@ -21,6 +22,7 @@
     "commander": "^14.0.2"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "typescript": "^5.9.3"
   }
 }
