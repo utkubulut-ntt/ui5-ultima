@@ -1,5 +1,6 @@
-import { confirm, input } from "@inquirer/prompts";
+import { confirm, input, select } from "@inquirer/prompts";
 import { spawn } from "child_process";
+import consola from "consola";
 import { mkdir, readdir, readFile, writeFile } from "fs/promises";
 import path from 'path';
 
@@ -15,21 +16,29 @@ export default class Generator {
     private fragment: boolean;
     private ui5Path: string;
     private archive: string;
+    private cancel = false;
 
     public async generate() {
         await this.prompt();
-        await this.generateApp();
+
+        if (!this.cancel) {
+            await this.generateApp();
+        }
     }
 
     private async generateApp() {
         const target = path.join(process.cwd(), this.uiModule);
         const source = path.join(__dirname, "..", "..", "template", "app");
+
+        consola.start("Generating a free-style SAPUI5 application...");
         await this.createRootDirectory(target);
         await this.createFiles(source, target);
         await this.installNpmPackages(target);
+        consola.success("UI5 Ultima has successfully generated your application!");
     }
 
     private async createRootDirectory(target: string) {
+        consola.info(`Generating ${this.uiModule} root directory...`);
         await mkdir(target, { recursive: true });
     }
 
@@ -55,6 +64,7 @@ export default class Generator {
                     continue;
                 }
 
+                consola.info(`Generating ${entry.name} directory...`);
                 await mkdir(targetPath, { recursive: true });
                 await this.createFiles(sourcePath, targetPath);
             } else if (entry.isFile()) {
@@ -64,28 +74,40 @@ export default class Generator {
 
                 const rawContent = await readFile(sourcePath, "utf8");
                 const content = this.replaceContent(rawContent);
+
+                consola.info(`Generating ${targetName} file...`);
                 await writeFile(targetPath, content, "utf-8");
             }
         }
     }
 
     private async prompt() {
-        this.uiModule = await this.getUIModule();
-        this.namespace = await this.getNamespace();
-        this.version = await this.getVersion();
-        this.title = await this.getTitle();
-        this.description = await this.getDescription();
-        this.view = await this.getView();
-        this.base = await this.includeBaseClass();
-        this.odata = await this.includeODataClasses();
-        this.fragment = await this.includeFragmentClass();
-        this.ui5Path = this.namespace.replaceAll(".", "/");
-        this.archive = this.namespace.replaceAll(".", "");
+        try {
+            this.uiModule = await this.getUIModule();
+            this.namespace = await this.getNamespace();
+            this.version = await this.getVersion();
+            this.title = await this.getTitle();
+            this.description = await this.getDescription();
+            this.view = await this.getView();
+            this.base = await this.includeBaseClass();
+            this.odata = await this.includeODataClasses();
+            this.fragment = await this.includeFragmentClass();
+            this.ui5Path = this.namespace.replaceAll(".", "/");
+            this.archive = this.namespace.replaceAll(".", "");
+        } catch (error) {
+            this.cancel = true;
+
+            if (error instanceof Error && error.name === "ExitPromptError") {
+                consola.info("Generation has been canceled!");
+            } else {
+                throw error;
+            }
+        }
     }
 
     private async getUIModule() {
         return input({
-            message: "Enter UI module name",
+            message: "Enter UI module name (generator will create a directory with the name you enter):",
             required: true,
             validate: (value) => {
                 const regex = /^[a-z](?:[a-z0-9]*(?:-[a-z0-9]+)*)?$/;
@@ -102,7 +124,7 @@ export default class Generator {
 
     private async getNamespace() {
         return input({
-            message: "Enter a namespace",
+            message: "Enter SAPUI5 app namespace:",
             required: true,
             validate: (value) => {
                 const regex = /^[a-z](?:[a-z0-9]*(?:\.[a-z0-9]+)*)?$/;
@@ -118,31 +140,50 @@ export default class Generator {
     }
 
     private async getVersion() {
-        return "1.136.11";
+        const url = "https://raw.githubusercontent.com/hasanciftci26/ui5-ultima/sapui5-versions/versions.json";
+        let versions: string[] = [];
+
+        try {
+            const response = await fetch(url);
+
+            if (response.ok) {
+                versions = await response.json();
+            } else {
+                versions.push("1.136.11");
+            }
+        } catch (err) {
+            versions.push("1.136.11");
+        }
+
+        return select<string>({
+            message: "Select an SAPUI5 version:",
+            choices: versions,
+            default: "1.136.11"
+        });
     }
 
     private async getTitle() {
         return input({
-            message: "Enter your SAPUI5 app title",
+            message: "Enter a title for your application:",
             required: true
         });
     }
 
     private async getDescription() {
         return input({
-            message: "Enter your SAPUI5 app description",
+            message: "Enter a description for your application:",
             required: true
         });
     }
 
     private async getView() {
         return input({
-            message: "Enter the initial view name",
+            message: "Enter a name for your initial SAPUI5 view:",
             validate: (value) => {
                 const regex = /^[A-Z][a-zA-Z]*$/;
 
                 if (!regex.test(value)) {
-                    return "Invalid View name. Must start with an uppercase letter and contain only letters.";
+                    return "Invalid view name. Must start with an uppercase letter and contain only letters.";
                 }
 
                 return true;
@@ -152,21 +193,21 @@ export default class Generator {
 
     private async includeBaseClass() {
         return confirm({
-            message: "Would you like to include the Base class? (default: Y)",
+            message: "Would you like to include the Base class? (default: Y):",
             default: true
         });
     }
 
     private async includeODataClasses() {
         return confirm({
-            message: "Would you like to include the OData classes? (default: Y)",
+            message: "Would you like to include the OData classes? (default: Y):",
             default: true
         });
     }
 
     private async includeFragmentClass() {
         return confirm({
-            message: "Would you like to include the Fragment class? (default: Y)",
+            message: "Would you like to include the Fragment class? (default: Y):",
             default: true
         });
     }
@@ -198,7 +239,19 @@ export default class Generator {
         }
     }
 
-    private installNpmPackages(target: string): Promise<void> {
+    private async installNpmPackages(target: string): Promise<void> {
+        const install = await confirm({
+            message: "Would you like to run npm install command? (default: Y):",
+            default: true
+        });
+
+        if (install) {
+            consola.info("Installing npm packages...");
+            await this.runNpmInstall(target);
+        }
+    }
+
+    private runNpmInstall(target: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = spawn("npm", ["install"], {
                 cwd: target,
