@@ -7,9 +7,13 @@ import View from "sap/ui/core/mvc/View";
 import Route, { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
 import ResourceModel from "sap/ui/model/resource/ResourceModel";
 import Component from "{{UI5_PATH}}/Component";
-import FragmentService from "{{UI5_PATH}}/lib/core/FragmentService";
-import ODataService from "{{UI5_PATH}}/lib/odata/ODataService";
 import formatter from "{{UI5_PATH}}/model/formatter";
+// ODATA_BLOCK_START
+import ODataService from "{{UI5_PATH}}/lib/odata/ODataService";
+// ODATA_BLOCK_END
+// FRAGMENT_BLOCK_START
+import FragmentService from "{{UI5_PATH}}/lib/core/FragmentService";
+// FRAGMENT_BLOCK_END
 
 /**
  * @namespace {{NAMESPACE}}.controller
@@ -20,12 +24,20 @@ export default abstract class BaseController extends Controller {
     // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
     public readonly formatter = formatter;
+    // ODATA_BLOCK_START
     protected odata: ODataService;
+    // ODATA_BLOCK_END
+    // FRAGMENT_BLOCK_START
     protected fragment: FragmentService;
+    // FRAGMENT_BLOCK_END
 
     public override onInit() {
+        // ODATA_BLOCK_START
         this.odata = new ODataService(this);
+        // ODATA_BLOCK_END
+        // FRAGMENT_BLOCK_START
         this.fragment = new FragmentService(this);
+        // FRAGMENT_BLOCK_END
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -75,7 +75,7 @@ export default class Generator {
                 }
 
                 const rawContent = await readFile(sourcePath, "utf8");
-                const content = this.replaceContent(rawContent);
+                const content = this.replaceContent(rawContent, targetName);
 
                 consola.info(`Generating ${targetName} file...`);
                 await writeFile(targetPath, content, "utf-8");
@@ -272,8 +272,8 @@ export default class Generator {
         });
     }
 
-    private replaceContent(content: string) {
-        return content
+    private replaceContent(rawContent: string, fileName: string) {
+        const content = rawContent
             .replaceAll("{{UI_MODULE}}", this.uiModule)
             .replaceAll("{{NAMESPACE}}", this.namespace)
             .replaceAll("{{VERSION}}", this.version)
@@ -282,5 +282,39 @@ export default class Generator {
             .replaceAll("{{VIEW}}", this.view)
             .replaceAll("{{UI5_PATH}}", this.ui5Path)
             .replaceAll("{{ARCHIVE}}", this.archive);
+
+        return this.replaceBlocks(content, fileName);
+    }
+
+    private replaceBlocks(rawContent: string, fileName: string) {
+        if (["BaseController.ts", "Base.ts", "Base.types.ts"].includes(fileName)) {
+            return this.replaceBaseBlocks(rawContent);
+        } else {
+            return rawContent;
+        }
+    }
+
+    private replaceBaseBlocks(rawContent: string) {
+        if (!this.odata && !this.fragment) {
+            return rawContent
+                .replace(/^\s*\/\/ ODATA_BLOCK_START[\s\S]*?^\s*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^\s*\/\/ FRAGMENT_BLOCK_START[\s\S]*?^\s*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
+        } else if (!this.odata) {
+            return rawContent
+                .replace(/^\s*\/\/ ODATA_BLOCK_START[\s\S]*?^\s*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_START[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
+        } else if (!this.fragment) {
+            return rawContent
+                .replace(/^\s*\/\/ FRAGMENT_BLOCK_START[\s\S]*?^\s*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ ODATA_BLOCK_START[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "");
+        } else {
+            return rawContent
+                .replace(/^[ \t]*\/\/ ODATA_BLOCK_START[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_START[ \t]*\r?\n?/gm, "")
+                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
+        }
     }
 }
