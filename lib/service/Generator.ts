@@ -100,7 +100,7 @@ export default class Generator {
             this.cancel = true;
 
             if (error instanceof Error && error.name === "ExitPromptError") {
-                consola.info("Generator has been canceled!");
+                consola.info("Application generator has been canceled!");
             } else {
                 throw error;
             }
@@ -183,10 +183,10 @@ export default class Generator {
             message: "Enter a name for your initial SAPUI5 view (without .view.xml extension):",
             required: true,
             validate: (value) => {
-                const regex = /^[A-Z][a-zA-Z]*$/;
+                const regex = /^[A-Z][a-zA-Z0-9]*$/;
 
                 if (!regex.test(value)) {
-                    return "Invalid view name. Must start with an uppercase letter and contain only letters.";
+                    return "Invalid view name. Must start with an uppercase letter and contain only letters and numbers.";
                 }
 
                 return true;
