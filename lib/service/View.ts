@@ -2,7 +2,8 @@ import consola from "consola";
 import Manifest from "./Manifest";
 import { input } from "@inquirer/prompts";
 import path from "path";
-import { access, mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import Util from "./Util";
 
 export default class View {
     private manifest = new Manifest();
@@ -105,11 +106,9 @@ export default class View {
 
     private async createBaseControllerFile() {
         const target = path.join(process.cwd(), "webapp", "controller", "BaseController.ts");
+        const exists = await Util.pathExists(target);
 
-        try {
-            await access(target);
-            return;
-        } catch (error) {
+        if (!exists) {
             const templatePath = path.join(__dirname, "..", "..", "template", "controller", "BaseController.ts.tpl");
             const template = await readFile(templatePath, "utf-8");
             const content = this.replaceContent(template);

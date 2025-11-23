@@ -1,24 +1,21 @@
-import { access, readFile, writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import path from "path";
 import { ManifestContent, Route, Target, TemplateManifestContent } from "../types/Manifest.types";
+import Util from "./Util";
 
 export default class Manifest {
     public async check() {
         const manifestPath = path.join(process.cwd(), "webapp", "manifest.json");
-        try {
-            await access(manifestPath);
-        } catch (error) {
-            if (this.hasCode(error) && error.code === "ENOENT") {
-                throw new Error(
-                    "The manifest.json file was not found. Run the command in your UI module directory containing the webapp directory. " +
-                    "The manifest.json file must be inside of the webapp directory."
-                );
-            } else {
-                throw error;
-            }
+        const exists = await Util.pathExists(manifestPath);
+
+        if (!exists) {
+            throw new Error(
+                "The manifest.json file was not found. Run the command in your UI module directory containing the webapp directory. " +
+                "The manifest.json file must be inside of the webapp directory."
+            );
         }
     }
-        
+
     public addODataModel(rawContent: string, uri: string) {
         const content = JSON.parse(rawContent) as TemplateManifestContent;
 

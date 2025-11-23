@@ -2,7 +2,8 @@ import consola from "consola";
 import Manifest from "./Manifest";
 import { input } from "@inquirer/prompts";
 import path from "path";
-import { access, mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import Util from "./Util";
 
 export default class Fragment {
     private manifest = new Manifest();
@@ -58,10 +59,9 @@ export default class Fragment {
 
             if (parts.length > 1) {
                 targetDirectory = path.join(targetDirectory, ...parts.slice(0, -1));
+                const exists = await Util.pathExists(targetDirectory);
 
-                try {
-                    await access(targetDirectory);
-                } catch (error) {
+                if (!exists) {
                     consola.info(`Generating ${parts.slice(0, -1).join("/")} directory...`);
                     await mkdir(targetDirectory, { recursive: true });
                 }
