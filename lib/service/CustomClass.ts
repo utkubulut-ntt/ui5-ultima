@@ -90,6 +90,7 @@ export default class CustomClass {
             consola.start("Generating a custom class...");
 
             await this.addCustomClassGlobalType();
+            await this.addBaseController();
 
             if (this.extendBase) {
                 await this.addBaseClass();
@@ -128,6 +129,29 @@ export default class CustomClass {
         await writeFile(targetPath, content);
     }
 
+    private async addBaseController() {
+        const targetDirectory = path.join(process.cwd(), "webapp", "controller");
+        const targetPath = path.join(targetDirectory, "BaseController.ts");
+        const exists = await Util.pathExists(targetPath);
+
+        if (exists) {
+            return;
+        }
+
+        const directoryExists = await Util.pathExists(targetDirectory);
+        const templatePath = path.join(__dirname, "..", "..", "template", "controller", "BaseController.ts.tpl");
+        const template = await readFile(templatePath, "utf-8");
+        const content = this.replaceContent(template);
+
+        if (!directoryExists) {
+            consola.info("Generating controller directory...");
+            await mkdir(targetDirectory, { recursive: true });
+        }
+
+        consola.info("Generating BaseController.ts file...");
+        await writeFile(targetPath, content);
+    }
+
     private setClassLocations() {
         const parts = this.name.split(".");
 
@@ -146,11 +170,49 @@ export default class CustomClass {
     }
 
     private async addBaseClass() {
+        const targetDirectory = path.join(process.cwd(), "webapp", "lib", "core");
+        const targetPath = path.join(targetDirectory, "Base.ts");
+        const exists = await Util.pathExists(targetPath);
 
+        if (exists) {
+            return;
+        }
+
+        const directoryExists = await Util.pathExists(targetDirectory);
+        const templatePath = path.join(__dirname, "..", "..", "template", "class", "core", "Base.ts.tpl");
+        const template = await readFile(templatePath, "utf-8");
+        const content = this.replaceContent(template);
+
+        if (!directoryExists) {
+            consola.info("Generating lib/core directory...");
+            await mkdir(targetDirectory, { recursive: true });
+        }
+
+        consola.info("Generating Base.ts file...");
+        await writeFile(targetPath, content);
     }
 
     private async addBaseClassType() {
+        const targetDirectory = path.join(process.cwd(), "webapp", "types", "core");
+        const targetPath = path.join(targetDirectory, "Base.types.ts");
+        const exists = await Util.pathExists(targetPath);
 
+        if (exists) {
+            return;
+        }
+
+        const directoryExists = await Util.pathExists(targetDirectory);
+        const templatePath = path.join(__dirname, "..", "..", "template", "types", "core", "Base.types.ts.tpl");
+        const template = await readFile(templatePath, "utf-8");
+        const content = this.replaceContent(template);
+
+        if (!directoryExists) {
+            consola.info("Generating types/core directory...");
+            await mkdir(targetDirectory, { recursive: true });
+        }
+
+        consola.info("Generating Base.types.ts file...");
+        await writeFile(targetPath, content);
     }
 
     private async addCustomClass() {
@@ -265,6 +327,8 @@ export default class CustomClass {
             .replaceAll("{{CLASS_NAME}}", this.className)
             .replaceAll("{{CLASS_TYPE_PATH}}", this.classTypeBasePath + "/" + this.className)
             .replaceAll("{{CLASS_NAMESPACE}}", this.classNamespace)
-            .replaceAll("{{MODULE}}", this.module);
+            .replaceAll("{{MODULE}}", this.module)
+            .replaceAll("{{NAMESPACE}}", this.appNamespace)
+            .replaceAll("{{UI5_PATH}}", this.appBasePath);
     }
 }
