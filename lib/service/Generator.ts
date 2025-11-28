@@ -18,6 +18,7 @@ export default class Generator {
     private base: boolean;
     private odata: boolean;
     private fragment: boolean;
+    private router: boolean;
     private ui5Path: string;
     private archive: string;
     private cancel = false;
@@ -27,6 +28,7 @@ export default class Generator {
 
         if (!this.cancel) {
             await this.generateApp();
+            await this.generateRouter();
         }
     }
 
@@ -43,8 +45,26 @@ export default class Generator {
         consola.success("UI5 Ultima has successfully generated your application!");
     }
 
+    private async generateRouter() {
+        if (!this.router) {
+            return;
+        }
+
+        const target = path.join(process.cwd(), "router");
+        const source = path.join(__dirname, "..", "..", "template", "router");
+
+        consola.start("Generating a standalone approuter files...");
+
+        await this.createRootDirectory(target);
+        await this.createFiles(source, target);
+        await this.installNpmPackages(target);
+
+        consola.success("UI5 Ultima has successfully generated your standalone approuter!");
+    }
+
     private async createRootDirectory(target: string) {
-        consola.info(`Generating ${this.uiModule} root directory...`);
+        const directory = target.split("/");
+        consola.info(`Generating ${directory[directory.length - 1]} root directory...`);
         await mkdir(target, { recursive: true });
     }
 
@@ -108,6 +128,7 @@ export default class Generator {
             this.base = await this.includeBaseClass();
             this.odata = await this.includeODataClasses();
             this.fragment = await this.includeFragmentClass();
+            this.router = await this.includeApprouterClass();
             this.ui5Path = this.namespace.replaceAll(".", "/");
             this.archive = this.namespace.replaceAll(".", "");
         } catch (error) {
@@ -243,6 +264,13 @@ export default class Generator {
         });
     }
 
+    private async includeApprouterClass() {
+        return confirm({
+            message: "Would you like to include the Standalone Approuter class? (default: Y):",
+            default: true
+        });
+    }
+
     private isIncluded(directory: boolean, name: string) {
         if (directory) {
             if (name === "odata" && !this.odata) {
@@ -309,7 +337,9 @@ export default class Generator {
             .replaceAll("{{DESCRIPTION}}", this.description)
             .replaceAll("{{VIEW}}", this.view)
             .replaceAll("{{UI5_PATH}}", this.ui5Path)
-            .replaceAll("{{ARCHIVE}}", this.archive);
+            .replaceAll("{{ARCHIVE}}", this.archive)
+            .replaceAll("{{WELCOME_FILE}}", this.getWelcomeFile())
+            .replaceAll("{{DEFAULT_ROUTE}}", this.getDefaultRoute());
 
         return this.replaceBlocks(content, fileName);
     }
@@ -344,5 +374,21 @@ export default class Generator {
                 .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_START[ \t]*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
         }
+    }
+
+    private getWelcomeFile() {
+        return this.namespace.replaceAll(".", "") + this.uiModule.replaceAll("-", "");
+    }
+
+    private getDefaultRoute() {
+        if (!this.model) {
+            return "";
+        }
+
+        return `{
+            "source": "^${this.modelUri}(.*)$",
+            "destination": "backend-api",
+            "authenticationType": "xsuaa"
+        }`;
     }
 }
