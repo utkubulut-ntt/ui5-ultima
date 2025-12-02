@@ -18,15 +18,19 @@ export default class Generator {
     private base: boolean;
     private odata: boolean;
     private fragment: boolean;
+    private router: boolean;
     private ui5Path: string;
     private archive: string;
     private cancel = false;
+    private npmTargets: { target: string; name: string }[] = [];
 
     public async generate() {
         await this.prompt();
 
         if (!this.cancel) {
             await this.generateApp();
+            await this.generateApprouter();
+            await this.installNpmPackages();
         }
     }
 
@@ -34,17 +38,43 @@ export default class Generator {
         const target = path.join(process.cwd(), this.uiModule);
         const source = path.join(__dirname, "..", "..", "template", "app");
 
+        this.npmTargets.push({
+            target: target,
+            name: "UI application"
+        });
+
         consola.start("Generating a free-style SAPUI5 application...");
 
         await this.createRootDirectory(target);
         await this.createFiles(source, target);
-        await this.installNpmPackages(target);
 
         consola.success("UI5 Ultima has successfully generated your application!");
     }
 
+    private async generateApprouter() {
+        if (!this.router) {
+            return;
+        }
+
+        const target = path.join(process.cwd(), "router");
+        const source = path.join(__dirname, "..", "..", "template", "router");
+        
+        this.npmTargets.push({
+            target: target,
+            name: "Approuter"
+        });
+
+        consola.start("Generating standalone approuter files...");
+
+        await this.createRootDirectory(target);
+        await this.createFiles(source, target);
+
+        consola.success("UI5 Ultima has successfully generated your standalone approuter!");
+    }
+
     private async createRootDirectory(target: string) {
-        consola.info(`Generating ${this.uiModule} root directory...`);
+        const directory = target.split("/");
+        consola.info(`Generating ${directory[directory.length - 1]} root directory...`);
         await mkdir(target, { recursive: true });
     }
 
@@ -108,6 +138,7 @@ export default class Generator {
             this.base = await this.includeBaseClass();
             this.odata = await this.includeODataClasses();
             this.fragment = await this.includeFragmentClass();
+            this.router = await this.includeApprouter();
             this.ui5Path = this.namespace.replaceAll(".", "/");
             this.archive = this.namespace.replaceAll(".", "");
         } catch (error) {
@@ -243,6 +274,13 @@ export default class Generator {
         });
     }
 
+    private async includeApprouter() {
+        return confirm({
+            message: "Would you like to include the Standalone Approuter? (default: Y):",
+            default: true
+        });
+    }
+
     private isIncluded(directory: boolean, name: string) {
         if (directory) {
             if (name === "odata" && !this.odata) {
@@ -270,15 +308,17 @@ export default class Generator {
         }
     }
 
-    private async installNpmPackages(target: string): Promise<void> {
+    private async installNpmPackages(): Promise<void> {
         const install = await confirm({
             message: "Would you like to install npm packages? (default: Y):",
             default: true
         });
 
-        if (install) {
-            consola.info("Installing npm packages...");
-            await this.runNpmInstall(target);
+        for (const npm of this.npmTargets) {
+            if (install) {
+                consola.info(`Installing ${npm.name} npm packages...`);
+                await this.runNpmInstall(npm.target);
+            }
         }
     }
 
@@ -309,13 +349,16 @@ export default class Generator {
             .replaceAll("{{DESCRIPTION}}", this.description)
             .replaceAll("{{VIEW}}", this.view)
             .replaceAll("{{UI5_PATH}}", this.ui5Path)
-            .replaceAll("{{ARCHIVE}}", this.archive);
+            .replaceAll("{{ARCHIVE}}", this.archive)
+            .replaceAll("{{WELCOME_FILE}}", this.archive)
+            .replaceAll("{{DEFAULT_ROUTE}}", this.getDefaultRoute(false))
+            .replaceAll("{{DEFAULT_UI_ROUTE}}", this.getDefaultRoute(true));
 
         return this.replaceBlocks(content, fileName);
     }
 
     private replaceBlocks(rawContent: string, fileName: string) {
-        if (["BaseController.ts", "Base.ts", "Base.types.ts"].includes(fileName)) {
+        if (["BaseController.ts", "Base.ts", "Base.types.ts", "xs-app.json"].includes(fileName)) {
             return this.replaceBaseBlocks(rawContent);
         } else {
             return rawContent;
@@ -326,15 +369,18 @@ export default class Generator {
         if (!this.odata && !this.fragment) {
             return rawContent
                 .replace(/^\s*\/\/ ODATA_BLOCK_START[\s\S]*?^\s*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/\/\/ ROUTE_BLOCK_START\s*\n\s*?\n?\/\/ ROUTE_BLOCK_END\s*\n?/g, "")
                 .replace(/^\s*\/\/ FRAGMENT_BLOCK_START[\s\S]*?^\s*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
         } else if (!this.odata) {
             return rawContent
                 .replace(/^\s*\/\/ ODATA_BLOCK_START[\s\S]*?^\s*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/\/\/ ROUTE_BLOCK_START\s*\n\s*?\n?\/\/ ROUTE_BLOCK_END\s*\n?/g, "")
                 .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_START[ \t]*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
         } else if (!this.fragment) {
             return rawContent
                 .replace(/^\s*\/\/ FRAGMENT_BLOCK_START[\s\S]*?^\s*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^\s*\/\/ ROUTE_BLOCK_START.*\r?\n|^\s*\/\/ ROUTE_BLOCK_END.*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ ODATA_BLOCK_START[ \t]*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "");
         } else {
@@ -342,7 +388,22 @@ export default class Generator {
                 .replace(/^[ \t]*\/\/ ODATA_BLOCK_START[ \t]*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ ODATA_BLOCK_END[ \t]*\r?\n?/gm, "")
                 .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_START[ \t]*\r?\n?/gm, "")
-                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "");
+                .replace(/^[ \t]*\/\/ FRAGMENT_BLOCK_END[ \t]*\r?\n?/gm, "")
+                .replace(/^\s*\/\/ ROUTE_BLOCK_START.*\r?\n|^\s*\/\/ ROUTE_BLOCK_END.*\r?\n?/gm, "");
         }
+    }
+
+    private getDefaultRoute(ui: boolean) {
+        if (!this.model) {
+            return "";
+        }
+
+        const modelUri = this.modelUri.endsWith('/') ? this.modelUri : this.modelUri + '/';
+
+        return `{
+            "source": "^${modelUri}(.*)$",
+            "destination": "backend-api",
+            "authenticationType": "xsuaa"
+        }${ui ? "," : ""}`;
     }
 }

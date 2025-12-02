@@ -15,7 +15,7 @@
 
     <script
         id="sap-ui-bootstrap"
-        src="https://sapui5.hana.ondemand.com/{{VERSION}}/resources/sap-ui-core.js"
+        src="https://ui5.sap.com/{{VERSION}}/resources/sap-ui-core.js"
         data-sap-ui-theme="sap_horizon"
         data-sap-ui-resourceroots='{
             "{{NAMESPACE}}": "./"

@@ -4,8 +4,14 @@ import { ManifestContent, Route, Target, TemplateManifestContent } from "../type
 import Util from "./Util";
 
 export default class Manifest {
+    private uiPath?: string;
+
+    constructor(uiPath?: string) {
+        this.uiPath = uiPath;
+    }
+
     public async check() {
-        const manifestPath = path.join(process.cwd(), "webapp", "manifest.json");
+        const manifestPath = path.join(this.uiPath ? this.uiPath : process.cwd(), "webapp", "manifest.json");
         const exists = await Util.pathExists(manifestPath);
 
         if (!exists) {
@@ -108,6 +114,26 @@ export default class Manifest {
         await writeFile(manifestPath, JSON.stringify(content, null, 4));
     }
 
+    public async getModelUri() {
+        const content = await this.parse();
+
+        if (!content["sap.app"]?.dataSources) {
+            throw new Error(
+                "The dataSources of the application was not found. " +
+                "Make sure you have \"sap.app\": {\"dataSources\": \"{...}\"} section in your application's manifest.json file."
+            );
+        }
+
+        if (!content["sap.app"]?.dataSources["mainService"]?.uri) {
+            throw new Error(
+                "The uri of mainService was not found. " +
+                "Make sure you have \"sap.app\": {\"dataSources\": \"mainService\": {\"uri\": ...}} section in your application's manifest.json file."
+            );
+        }
+
+        return content["sap.app"].dataSources["mainService"].uri;
+    }
+
     private async parse() {
         const file = await this.load();
 
@@ -120,7 +146,7 @@ export default class Manifest {
     }
 
     private async load() {
-        const manifestPath = path.join(process.cwd(), "webapp", "manifest.json");
+        const manifestPath = path.join(this.uiPath ? this.uiPath : process.cwd(), "webapp", "manifest.json");
 
         try {
             const file = await readFile(manifestPath, "utf-8");

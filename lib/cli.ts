@@ -9,6 +9,7 @@ import addBaseClass from "./command/add-base-class";
 import addFragmentService from "./command/add-fragment-service";
 import addODataService from "./command/add-odata-service";
 import addCustomClass from "./command/add-custom-class";
+import addApprouter from "./command/add-approuter";
 
 program
     .name("ui5-ultima")
@@ -26,6 +27,7 @@ program
     .addCommand(addBaseClass)
     .addCommand(addFragmentService)
     .addCommand(addODataService)
-    .addCommand(addCustomClass);
+    .addCommand(addCustomClass)
+    .addCommand(addApprouter);
 
 program.parse();
