@@ -28,7 +28,7 @@ export default class Generator {
 
         if (!this.cancel) {
             await this.generateApp();
-            await this.generateRouter();
+            await this.generateApprouter();
         }
     }
 
@@ -45,7 +45,7 @@ export default class Generator {
         consola.success("UI5 Ultima has successfully generated your application!");
     }
 
-    private async generateRouter() {
+    private async generateApprouter() {
         if (!this.router) {
             return;
         }
@@ -128,7 +128,7 @@ export default class Generator {
             this.base = await this.includeBaseClass();
             this.odata = await this.includeODataClasses();
             this.fragment = await this.includeFragmentClass();
-            this.router = await this.includeApprouterClass();
+            this.router = await this.includeApprouter();
             this.ui5Path = this.namespace.replaceAll(".", "/");
             this.archive = this.namespace.replaceAll(".", "");
         } catch (error) {
@@ -264,9 +264,9 @@ export default class Generator {
         });
     }
 
-    private async includeApprouterClass() {
+    private async includeApprouter() {
         return confirm({
-            message: "Would you like to include the Standalone Approuter class? (default: Y):",
+            message: "Would you like to include the Standalone Approuter? (default: Y):",
             default: true
         });
     }
@@ -338,7 +338,7 @@ export default class Generator {
             .replaceAll("{{VIEW}}", this.view)
             .replaceAll("{{UI5_PATH}}", this.ui5Path)
             .replaceAll("{{ARCHIVE}}", this.archive)
-            .replaceAll("{{WELCOME_FILE}}", this.getWelcomeFile())
+            .replaceAll("{{WELCOME_FILE}}", this.archive)
             .replaceAll("{{DEFAULT_ROUTE}}", this.getDefaultRoute());
 
         return this.replaceBlocks(content, fileName);
@@ -376,17 +376,15 @@ export default class Generator {
         }
     }
 
-    private getWelcomeFile() {
-        return this.namespace.replaceAll(".", "") + this.uiModule.replaceAll("-", "");
-    }
-
     private getDefaultRoute() {
         if (!this.model) {
             return "";
         }
 
+        const modelUri = this.modelUri.endsWith('/') ? this.modelUri : this.modelUri + '/';
+
         return `{
-            "source": "^${this.modelUri}(.*)$",
+            "source": "^${modelUri}(.*)$",
             "destination": "backend-api",
             "authenticationType": "xsuaa"
         }`;

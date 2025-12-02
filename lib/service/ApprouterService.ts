@@ -4,8 +4,9 @@ import Util from "./Util";
 import { mkdir, readdir, readFile, writeFile } from "fs/promises";
 import { confirm, input } from "@inquirer/prompts";
 import { spawn } from "child_process";
+import Manifest from "./Manifest";
 
-export default class RouterService {
+export default class ApprouterService {
     private uiPath: string;
     private namespace: string;
     private modelUri: string;
@@ -56,13 +57,19 @@ export default class RouterService {
     private async prompt() {
         try {
             this.uiPath = await this.getUIPath();
-            this.namespace = await this.getNamespace();
-            this.modelUri = await this.getModelUri();
+
+            if (!await this.checkManifestFile()) {
+                if (!this.namespace) {
+                    this.namespace = await this.getNamespace();
+                }
+                
+                this.modelUri = await this.getModelUri();
+            }
         } catch (error) {
             this.cancel = true;
 
             if (error instanceof Error && error.name === "ExitPromptError") {
-                consola.info("Application generator has been canceled!");
+                consola.info("Approuter generator has been canceled!");
             } else {
                 throw error;
             }
@@ -104,8 +111,7 @@ export default class RouterService {
     }
 
     private getWelcomeFile() {
-        const uiPath = this.uiPath.split("/");
-        return this.namespace.replaceAll(".", "") + uiPath[uiPath.length - 1]?.replaceAll("-", "");
+        return this.namespace.replaceAll(".", "");
     }
 
     private getDefaultRoute() {
@@ -113,8 +119,10 @@ export default class RouterService {
             return "";
         }
 
+        const modelUri = this.modelUri.endsWith('/') ? this.modelUri : this.modelUri + '/';
+        
         return `{
-            "source": "^${this.modelUri}(.*)$",
+            "source": "^${modelUri}(.*)$",
             "destination": "backend-api",
             "authenticationType": "xsuaa"
         }`;
@@ -155,5 +163,20 @@ export default class RouterService {
                 resolve();
             });
         });
+    }
+
+    private async checkManifestFile() {
+        const manifest = new Manifest(this.uiPath);
+
+        try {
+            await manifest.check();
+            this.namespace = await manifest.getNamespace();
+            this.modelUri = await manifest.getModelUri();
+        }
+        catch (err){
+            return false;
+        }
+
+        return true;
     }
 }

@@ -1,6 +1,7 @@
 export type ManifestContent = {
     "sap.app"?: {
         id?: string;
+        dataSources?: Record<string, DataSource>;
     };
     "sap.ui5"?: {
         routing?: {
