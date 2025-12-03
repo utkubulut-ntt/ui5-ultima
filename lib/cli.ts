@@ -5,6 +5,7 @@ import generate from "./command/generate";
 import addView from "./command/add-view";
 import addBaseController from "./command/add-base-controller";
 import addFragment from "./command/add-fragment";
+import addDialog from "./command/add-dialog";
 import addBaseClass from "./command/add-base-class";
 import addFragmentService from "./command/add-fragment-service";
 import addODataService from "./command/add-odata-service";
@@ -24,6 +25,7 @@ program
     .addCommand(addView)
     .addCommand(addBaseController)
     .addCommand(addFragment)
+    .addCommand(addDialog)
     .addCommand(addBaseClass)
     .addCommand(addFragmentService)
     .addCommand(addODataService)

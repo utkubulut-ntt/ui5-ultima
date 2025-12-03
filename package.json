@@ -1,6 +1,6 @@
 {
   "name": "ui5-ultima",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "UI5 Ultima is a CLI tool to generate free-style SAPUI5 applications and artifacts with TypeScript. The UI5 Ultima comes with some useful built-in SAPUI5 classes.",
   "keywords": [
     "sapui5",
